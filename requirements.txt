@@ -2,6 +2,10 @@ Django>=4.2
 djangorestframework
 django-filter
 djangorestframework-simplejwt
-
-# optional - for environment variables handling
+django-redis
+redis
+celery
+django-celery-beat
 python-dotenv
+gunicorn
+psycopg2-binary
