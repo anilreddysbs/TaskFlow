@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Taskflow Dashboard</title>
+  <link rel="stylesheet" href="static/frontend/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>Taskflow</h1>
+        <p>Team management dashboard</p>
+      </div>
+      <nav class="nav-links">
+        <button id="refresh-layout" type="button">Refresh data</button>
+      </nav>
+      <div class="status-card">
+        <h2>Status</h2>
+        <div class="status-row"><span>Server</span><strong id="server-status">Ready</strong></div>
+        <div class="status-row"><span>Auth</span><strong id="auth-status">Signed out</strong></div>
+      </div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <strong>Taskflow Pro</strong>
+          <span>Interactive API console inspired by Jira UX.</span>
+        </div>
+      </header>
+
+      <section class="grid">
+        <article class="card card--accent">
+          <div class="card-header">
+            <h2>Login</h2>
+            <p>Authenticate with JWT and start using the API.</p>
+          </div>
+          <div class="card-body">
+            <label>Username</label>
+            <input id="username" type="text" placeholder="Enter username" />
+            <label>Password</label>
+            <input id="password" type="password" placeholder="Enter password" />
+            <button id="login-button" type="button">Login</button>
+            <div id="login-error" class="error-message"></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h2>Token Control</h2>
+            <p>Use access and refresh tokens for secure requests.</p>
+          </div>
+          <div class="card-body token-area">
+            <div><strong>Access Token</strong><pre id="access-token">Not available</pre></div>
+            <div><strong>Refresh Token</strong><pre id="refresh-token">Not available</pre></div>
+            <button id="refresh-button" type="button">Refresh Access Token</button>
+            <button id="signout-button" type="button">Sign Out</button>
+            <div id="token-error" class="error-message"></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <h2>My Profile</h2>
+            <p>Current authenticated user details.</p>
+          </div>
+          <div class="card-body">
+            <div class="info-row"><span>ID:</span><strong id="me-id">—</strong></div>
+            <div class="info-row"><span>Username:</span><strong id="me-username">—</strong></div>
+            <div class="info-row"><span>Email:</span><strong id="me-email">—</strong></div>
+            <div class="info-row"><span>Name:</span><strong id="me-name">—</strong></div>
+            <button id="me-button" type="button">Load /api/me/</button>
+            <div id="me-error" class="error-message"></div>
+          </div>
+        </article>
+
+        <article class="card card--wide">
+          <div class="card-header">
+            <h2>Teams</h2>
+            <p>View and create teams. Team names require at least 3 characters.</p>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <label>Team Name</label>
+              <input id="team-name" type="text" placeholder="Example: Agile Squad" />
+            </div>
+            <div class="form-row">
+              <label>Description</label>
+              <textarea id="team-description" placeholder="Team mission or summary"></textarea>
+            </div>
+            <button id="create-team-button" type="button">Create Team</button>
+            <div id="team-error" class="error-message"></div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr><th>Name</th><th>Owner</th><th>Members</th><th>Created</th></tr>
+                </thead>
+                <tbody id="team-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="static/frontend/app.js"></script>
+</body>
+</html>
