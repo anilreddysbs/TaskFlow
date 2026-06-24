@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.core.cache import cache
 from django.db.models import Count, Q, Avg, Max, Min
+from tasks.models import Task
 from .cache_utils import CacheManager
 
 

@@ -7,14 +7,26 @@ from .models import Notification
 
 def _get_task_model():
     from tasks.models import Task
-
     return Task
 
 
 def _get_comment_model():
     from comments.models import Comment
-
     return Comment
+
+
+@receiver(pre_save, dispatch_uid="task_assignment_pre_save")
+def task_pre_save(sender, instance, **kwargs):
+    Task = _get_task_model()
+    if sender is not Task:
+        return
+    if instance.pk:
+        try:
+            instance._old_assigned_to = Task.objects.get(pk=instance.pk).assigned_to
+        except Task.DoesNotExist:
+            instance._old_assigned_to = None
+    else:
+        instance._old_assigned_to = None
 
 
 @receiver(post_save, dispatch_uid="task_assignment_notification")
@@ -33,10 +45,13 @@ def task_post_save(sender, instance, created, **kwargs):
             )
     else:
         # On update, if assigned_to changed, notify new assignee
-        try:
-            old = sender.objects.get(pk=instance.pk)
-        except sender.DoesNotExist:
-            old = None
+        old_assigned_to = getattr(instance, '_old_assigned_to', None)
+        if instance.assigned_to and instance.assigned_to != old_assigned_to:
+            Notification.objects.create(
+                recipient=instance.assigned_to,
+                actor=instance.created_by,
+                message=f"You were assigned to task '{instance.title}'",
+            )
 
 
 @receiver(post_save, dispatch_uid="comment_notification")
@@ -60,3 +75,14 @@ def comment_post_save(sender, instance, created, **kwargs):
                 actor=instance.author,
                 message=f"New comment on '{task.title}': {instance.content[:100]}",
             )
+
+
+@receiver(post_save, sender=Notification, dispatch_uid="send_email_notification_on_create")
+def send_email_notification_on_create(sender, instance, created, **kwargs):
+    if created:
+        try:
+            from .tasks import send_email_notification
+            send_email_notification.delay(instance.id)
+        except Exception:
+            pass
+

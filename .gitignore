@@ -12,6 +12,7 @@ __pycache__/
 env/
 venv/
 .venv
+.venv-1
 pip-log.txt
 pip-delete-this-directory.txt
 .tox/

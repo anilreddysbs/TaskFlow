@@ -33,6 +33,6 @@ ENV DJANGO_SETTINGS_MODULE=taskflow.settings
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/api/me/ -H "Authorization: Bearer ${TEST_TOKEN}" || exit 1
+    CMD curl -f http://localhost:8000/api/health/ || exit 1
 
 CMD ["gunicorn", "taskflow.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120"]

@@ -1,12 +1,14 @@
 from django.core.cache import cache
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.conf import settings
 import json
 
 
 class CacheManager:
     """Centralized cache key management and invalidation."""
 
+    TIMEOUT = getattr(settings, 'CACHES', {}).get('default', {}).get('TIMEOUT', 300)
     TASK_LIST_KEY = "tasks:list"
     TASK_DETAIL_KEY_TEMPLATE = "tasks:detail:{id}"
     DASHBOARD_STATS_KEY = "dashboard:stats"

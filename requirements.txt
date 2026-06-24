@@ -9,3 +9,9 @@ django-celery-beat
 python-dotenv
 gunicorn
 psycopg2-binary
+django-cors-headers
+dj-database-url
+django-storages
+boto3
+sentry-sdk
+python-json-logger

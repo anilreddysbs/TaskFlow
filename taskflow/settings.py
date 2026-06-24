@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'users',
     'teams',
     'tasks',   
@@ -47,18 +48,20 @@ INSTALLED_APPS = [
     'comments',
     'rest_framework',
     'django_filters',
+    'rest_framework_simplejwt.token_blacklist',
     'api',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'taskflow.middleware.SimpleCorsMiddleware',
+    'taskflow.middleware.RequestLoggingMiddleware',
 ]
 
 ROOT_URLCONF = 'taskflow.urls'
@@ -92,16 +95,33 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ),
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle"
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.environ.get('THROTTLE_ANON_RATE', '100/hour'),
+        "user": os.environ.get('THROTTLE_USER_RATE', '1000/hour')
+    },
     "DEFAULT_PAGINATION_CLASS": "api.pagination.CustomPageNumberPagination",
     "PAGE_SIZE": 10,
 }
 
-# Simple JWT settings (use defaults, can be overridden via env vars later)
+# Simple JWT settings
 from datetime import timedelta
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.environ.get('SIMPLE_JWT_ACCESS_MINUTES', 5))),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.environ.get('SIMPLE_JWT_REFRESH_DAYS', 1))),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.environ.get('SIMPLE_JWT_ACCESS_MINUTES', 15))),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.environ.get('SIMPLE_JWT_REFRESH_DAYS', 7))),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
+
+# CORS Configuration
+CORS_ALLOWED_ORIGINS = [
+    origin.strip() for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if origin.strip()
+]
+CORS_ALLOW_ALL_ORIGINS = os.environ.get("CORS_ALLOW_ALL_ORIGINS", "False").lower() in ("true", "1", "yes")
+CORS_ALLOW_CREDENTIALS = True
 
 # Caching configuration
 CACHES = {
@@ -116,15 +136,37 @@ CACHES = {
     }
 }
 
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database configuration (PostgreSQL for AWS RDS, SQLite fallback for local test run if needed)
+import dj_database_url
+if os.environ.get('DATABASE_URL'):
+    DATABASES = {
+        'default': dj_database_url.config(
+            conn_max_age=int(os.environ.get('DB_CONN_MAX_AGE', 600)),
+            ssl_require=os.environ.get('DB_SSL_REQUIRE', 'False').lower() in ('true', '1', 'yes')
+        )
     }
-}
+    # For RDS Proxy support
+    DATABASES['default']['DISABLE_SERVER_SIDE_BINDING'] = True
+elif os.environ.get('DB_HOST'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'taskflow'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+            'CONN_MAX_AGE': int(os.environ.get('DB_CONN_MAX_AGE', 600)),
+            'DISABLE_SERVER_SIDE_BINDING': True,
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -158,13 +200,46 @@ USE_I18N = True
 USE_TZ = True
 AUTH_USER_MODEL = "users.User"
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    BASE_DIR / 'frontend' / 'static',
-]
+# Static and Media Files (S3 support for AWS)
+if os.environ.get('USE_AWS_S3', 'False').lower() in ('true', '1', 'yes'):
+    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_CUSTOM_DOMAIN = os.environ.get('AWS_S3_CUSTOM_DOMAIN')
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',
+    }
+    
+    # Static files storage on S3
+    AWS_STATIC_LOCATION = 'static'
+    STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN or f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"}/{AWS_STATIC_LOCATION}/'
+    
+    # Media files storage on S3
+    AWS_MEDIA_LOCATION = 'media'
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN or f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"}/{AWS_MEDIA_LOCATION}/'
+else:
+    STATIC_URL = '/static/'
+    STATICFILES_DIRS = [
+        BASE_DIR / 'frontend' / 'static',
+    ]
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
+
+
+# HTTPS and Security Enforcements for AWS Production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True').lower() in ('true', '1', 'yes')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 # Celery Configuration
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
@@ -175,4 +250,66 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+
+
+# Structured Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'json': {
+            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            'format': '%(asctime)s %(name)s %(levelname)s %(message)s'
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'json' if not DEBUG else 'verbose',
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.environ.get('DJANGO_LOG_FILE', str(BASE_DIR / 'logs' / 'django.log')),
+            'formatter': 'verbose',
+            'maxBytes': 1024 * 1024 * 10,  # 10MB
+            'backupCount': 5,
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': os.environ.get('DJANGO_LOG_LEVEL', 'INFO'),
+        },
+        'taskflow': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'celery': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    },
+}
+
+# Create logs directory if not exists
+os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+
+# Sentry Integration
+SENTRY_DSN = os.environ.get('SENTRY_DSN')
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration(), CeleryIntegration()],
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+    )
 
