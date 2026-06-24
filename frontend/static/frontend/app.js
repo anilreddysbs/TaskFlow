@@ -29,7 +29,7 @@ const state = {
   refresh: localStorage.getItem('tf_refresh') || null,
 };
 
-const backendOrigin = 'http://127.0.0.1:8000';
+const backendOrigin = window.location.origin;
 
 const api = {
   token: `${backendOrigin}/api/token/`,
