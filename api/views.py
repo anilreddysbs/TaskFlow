@@ -148,3 +148,81 @@ class UserViewSet(ModelViewSet):
     search_fields = ['username', 'email']
 
 
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import status
+import os
+
+class GoogleConfigView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response({
+            'client_id': os.environ.get('GOOGLE_CLIENT_ID', '')
+        })
+
+
+class GoogleLoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = request.data.get('token')
+        if not token:
+            return Response({'detail': 'Google ID token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        client_id = os.environ.get('GOOGLE_CLIENT_ID')
+        if not client_id:
+            return Response({'detail': 'Google Client ID is not configured on the server.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        try:
+            # Verify the ID token using Google's verification library
+            idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), client_id)
+
+            # Check issuer
+            if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+                raise ValueError('Wrong issuer.')
+
+            # ID info contains: email, email_verified, name, sub (Google ID), picture, given_name, family_name
+            email = idinfo.get('email')
+            if not email:
+                return Response({'detail': 'Email not provided by Google account.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Get or create user
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                # User doesn't exist, create one
+                username = email.split('@')[0]
+                base_username = username
+                counter = 1
+                while User.objects.filter(username=username).exists():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    first_name=idinfo.get('given_name', ''),
+                    last_name=idinfo.get('family_name', ''),
+                    password=User.objects.make_random_password()
+                )
+
+            # Generate SimpleJWT tokens
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                }
+            })
+
+        except ValueError as e:
+            return Response({'detail': f'Invalid Google ID Token: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'detail': f'Authentication failed: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+

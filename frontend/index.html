@@ -10,6 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'frontend/style.css' %}" />
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -38,6 +40,10 @@
           <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password" />
         </div>
         <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+        <div class="auth-divider" id="google-signin-divider">
+          <span>or</span>
+        </div>
+        <div id="google-signin-btn" class="google-btn-wrapper"></div>
         <p class="auth-switch">Don't have an account? <a href="#" id="to-signup">Create one</a></p>
       </form>
 

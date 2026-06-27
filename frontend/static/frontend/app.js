@@ -14,6 +14,8 @@ const api = {
   projects: `${backendOrigin}/api/projects/`,
   tasks: `${backendOrigin}/api/tasks/`,
   comments: `${backendOrigin}/api/comments/`,
+  googleConfig: `${backendOrigin}/api/config/google/`,
+  googleLogin: `${backendOrigin}/api/auth/google/`,
 };
 
 // Application State
@@ -235,6 +237,9 @@ function clearTokens() {
   localStorage.removeItem('tf_refresh');
   dom.authScreen.classList.remove('hidden');
   updateSystemIndicators('Offline');
+  if (typeof google !== 'undefined') {
+    initGoogleSignIn();
+  }
 }
 
 function updateSystemIndicators(status = 'Online') {
@@ -895,12 +900,72 @@ async function initWorkspace() {
   await syncWorkspaceData();
 }
 
+async function initGoogleSignIn() {
+  try {
+    const config = await request(api.googleConfig);
+    const client_id = config && config.client_id;
+    const btn = document.getElementById('google-signin-btn');
+    const divider = document.getElementById('google-signin-divider');
+
+    if (client_id && btn) {
+      if (divider) divider.classList.remove('hidden');
+      btn.classList.remove('hidden');
+
+      google.accounts.id.initialize({
+        client_id: client_id,
+        callback: handleGoogleCredentialResponse,
+      });
+
+      google.accounts.id.renderButton(btn, {
+        theme: 'outline',
+        size: 'large',
+        width: 358,
+      });
+    } else {
+      if (divider) divider.classList.add('hidden');
+      if (btn) btn.classList.add('hidden');
+    }
+  } catch (err) {
+    console.error("Google authentication configuration failed to load:", err);
+  }
+}
+
+async function handleGoogleCredentialResponse(response) {
+  try {
+    const result = await request(api.googleLogin, {
+      method: 'POST',
+      body: JSON.stringify({ token: response.credential }),
+    });
+
+    setTokens(result.access, result.refresh);
+    showToast("Signed in with Google successfully!", "success");
+    await initWorkspace();
+  } catch (error) {
+    showToast(error.data?.detail || "Google authentication failed.", "error");
+  }
+}
+
 function init() {
   initEventListeners();
   if (state.access) {
     initWorkspace();
   } else {
     clearTokens();
+    // Wait for the Google GIS script to load
+    if (typeof google !== 'undefined') {
+      initGoogleSignIn();
+    } else {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (typeof google !== 'undefined') {
+          initGoogleSignIn();
+          clearInterval(interval);
+        } else if (attempts >= 10) {
+          clearInterval(interval);
+        }
+      }, 500);
+    }
   }
 }
 
