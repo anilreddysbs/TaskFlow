@@ -158,8 +158,9 @@ class GoogleConfigView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
+        client_id = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
         return Response({
-            'client_id': os.environ.get('GOOGLE_CLIENT_ID', '')
+            'client_id': client_id
         })
 
 
@@ -174,6 +175,7 @@ class GoogleLoginView(APIView):
         client_id = os.environ.get('GOOGLE_CLIENT_ID')
         if not client_id:
             return Response({'detail': 'Google Client ID is not configured on the server.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        client_id = client_id.strip()
 
         try:
             # Verify the ID token using Google's verification library
