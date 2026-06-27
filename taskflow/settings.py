@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'comments',
     'rest_framework',
     'django_filters',
+    'django_celery_beat',
     'rest_framework_simplejwt.token_blacklist',
     'api',
 ]
