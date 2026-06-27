@@ -27,6 +27,8 @@ COPY . .
 
 RUN mkdir -p /app/staticfiles /app/logs
 
+RUN python manage.py collectstatic --noinput
+
 ENV PYTHONUNBUFFERED=1
 ENV DJANGO_SETTINGS_MODULE=taskflow.settings
 

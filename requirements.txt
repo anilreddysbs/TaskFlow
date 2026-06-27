@@ -15,3 +15,4 @@ django-storages
 boto3
 sentry-sdk
 python-json-logger
+whitenoise>=6.0.0
