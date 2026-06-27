@@ -4,6 +4,9 @@ from rest_framework.permissions import IsAuthenticated
 from django.core.cache import cache
 from django.db.models import Count, Q, Avg, Max, Min
 from tasks.models import Task
+from teams.models import Team
+from projects.models import Project
+from comments.models import Comment
 from .cache_utils import CacheManager
 
 

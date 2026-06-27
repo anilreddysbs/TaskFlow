@@ -326,11 +326,11 @@ async function syncWorkspaceData() {
       request(api.comments).catch(() => []),
     ]);
 
-    state.users = users;
-    state.teams = teams;
-    state.projects = projects;
-    state.tasks = tasks;
-    state.comments = comments;
+    state.users = users && users.results ? users.results : (Array.isArray(users) ? users : []);
+    state.teams = teams && teams.results ? teams.results : (Array.isArray(teams) ? teams : []);
+    state.projects = projects && projects.results ? projects.results : (Array.isArray(projects) ? projects : []);
+    state.tasks = tasks && tasks.results ? tasks.results : (Array.isArray(tasks) ? tasks : []);
+    state.comments = comments && comments.results ? comments.results : (Array.isArray(comments) ? comments : []);
 
     // Trigger components refresh
     renderStats();
