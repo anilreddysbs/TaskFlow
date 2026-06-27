@@ -30,6 +30,7 @@ const state = {
   comments: [],
   currentTab: 'dashboard',
   selectedTaskId: null,
+  googleInitialized: false,
 };
 
 // Cache DOM Elements
@@ -901,6 +902,7 @@ async function initWorkspace() {
 }
 
 async function initGoogleSignIn() {
+  if (state.googleInitialized) return;
   try {
     const config = await request(api.googleConfig);
     const client_id = config && config.client_id;
@@ -908,6 +910,7 @@ async function initGoogleSignIn() {
     const divider = document.getElementById('google-signin-divider');
 
     if (client_id && btn) {
+      state.googleInitialized = true;
       if (divider) divider.classList.remove('hidden');
       btn.classList.remove('hidden');
 
