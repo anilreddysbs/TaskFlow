@@ -16,7 +16,7 @@ services:
     name: taskflow-web
     runtime: docker
     dockerfilePath: Dockerfile
-    dockerCommand: "sh -c \"python manage.py migrate && celery -A taskflow worker --loglevel=info --concurrency=1 & celery -A taskflow beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler & gunicorn taskflow.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120\""
+    dockerCommand: "python start.py"
     plan: free
     envVars:
       - key: DEBUG

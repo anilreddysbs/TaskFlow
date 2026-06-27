@@ -50,3 +50,8 @@ htmlcov/
 
 # OS
 Thumbs.db
+
+#docs
+INTERVIEW_AND_PRACTICES.md 
+PRODUCTION_AUDIT.md
+PRODUCTION_GUIDE.md
