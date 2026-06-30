@@ -348,8 +348,8 @@ if SENTRY_DSN:
 
 # Email Configuration
 if not os.environ.get('EMAIL_HOST'):
-    # Default to console if no SMTP server is provided to avoid connection crashes
-    EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+    # Force console backend if no SMTP server is provided to avoid connection crashes
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
     EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
     EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
