@@ -1,11 +1,12 @@
 import logging
 from celery import shared_task
+from celery.utils.log import get_task_logger
 from datetime import timedelta
 from django.utils import timezone
 from django.core.mail import send_mail
 from .models import Notification
 
-logger = logging.getLogger('taskflow')
+logger = get_task_logger(__name__)
 
 @shared_task(bind=True, max_retries=3)
 def cleanup_old_notifications(self):
@@ -26,6 +27,7 @@ def send_email_notification(self, notification_id):
     """
     Task to send an email notification.
     """
+    logger.info(f"Starting send_email_notification task for notification_id={notification_id}")
     try:
         notification = Notification.objects.select_related('recipient', 'actor').get(id=notification_id)
         

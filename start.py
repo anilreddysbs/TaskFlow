@@ -36,14 +36,14 @@ if res.returncode != 0:
 
 print("2. Starting Celery worker (concurrency=1)...")
 worker_process = subprocess.Popen([
-    sys.executable, "-m", "celery", "-A", "taskflow", "worker",
+    sys.executable, "-u", "-m", "celery", "-A", "taskflow", "worker",
     "--loglevel=info", "--concurrency=1"
 ])
 processes.append(worker_process)
 
 print("3. Starting Celery beat...")
 beat_process = subprocess.Popen([
-    sys.executable, "-m", "celery", "-A", "taskflow", "beat",
+    sys.executable, "-u", "-m", "celery", "-A", "taskflow", "beat",
     "--loglevel=info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"
 ])
 processes.append(beat_process)
